@@ -132,32 +132,110 @@ class UI {
     }
 
     static processSCSS(scss) {
-        let processedScss = scss;
-        const selectorBlocks = processedScss.match(/([^{}]+)\s*\{([^{}]+(?:\{[^{}]*\}[^{}]*)*)\}/g) || [];
-        for (const block of selectorBlocks) {
-            const selectorMatch = block.match(/([^{}]+)\s*\{/);
-            if (!selectorMatch) continue;
-            const parentSelector = selectorMatch[1].trim();
-            let blockContent = block.substring(block.indexOf('{') + 1, block.lastIndexOf('}'));
-            const nestedBlockRegex = /(&[^{}]*)\s*\{([^{}]*)\}/g;
-            let nestedMatch;
-            let processedBlock = blockContent;
-            while ((nestedMatch = nestedBlockRegex.exec(blockContent)) !== null) {
-                const nestedSelector = nestedMatch[1].trim().replace(/&/g, parentSelector);
-                const nestedRules = nestedMatch[2].trim();
-                processedBlock = processedBlock.replace(nestedMatch[0], '');
-                processedScss += `\n${nestedSelector} { ${nestedRules} }`;
+        function findClosingBrace(text, startIndex) {
+            let braceCount = 1;
+            for (let i = startIndex + 1; i < text.length; i++) {
+                if (text[i] === '{') braceCount++;
+                else if (text[i] === '}') braceCount--;
+                
+                if (braceCount === 0) return i;
             }
-            const cleanedRules = processedBlock
+            return -1;
+        }
+        function extractRules(content) {
+            let cleanContent = content;
+            let nestedStart = 0;
+            while ((nestedStart = cleanContent.indexOf('&', nestedStart)) !== -1) {
+                const braceIndex = cleanContent.indexOf('{', nestedStart);
+                if (braceIndex === -1) break;
+                const closeBraceIndex = findClosingBrace(cleanContent, braceIndex);
+                if (closeBraceIndex === -1) break;
+                cleanContent = cleanContent.substring(0, nestedStart) + 
+                    cleanContent.substring(closeBraceIndex + 1);
+            }
+            return cleanContent
                 .split(';')
                 .map(rule => rule.trim())
-                .filter(rule => rule.length > 0)
+                .filter(rule => rule.length > 0 && !rule.includes('&'))
                 .join('; ');
-                
-            const newBlock = `${parentSelector} { ${cleanedRules}; }`;
-            processedScss = processedScss.replace(block, newBlock);
         }
-        return processedScss.replace(/([^{}]+)\s*\{\s*;\s*\}/g, '');
+        
+        function processBlock(selector, content, result = []) {
+            const directRules = extractRules(content);
+            if (directRules.length > 0) {
+                result.push({
+                    selector: selector,
+                    rules: directRules
+                });
+            }
+            let index = 0;
+            let inAComment = false;
+            while (index < content.length) {
+                if (content.substr(index, 2) === '/*') {
+                    inAComment = true;
+                    index += 2;
+                    continue;
+                }
+                if (inAComment) {
+                    if (content.substr(index, 2) === '*/') {
+                        inAComment = false;
+                        index += 2;
+                    } else {
+                        index++;
+                    }
+                    continue;
+                }
+                if (content[index] === '&') {
+                    let nestedSelectorStart = index;
+                    let braceIndex = content.indexOf('{', nestedSelectorStart);
+                    if (braceIndex === -1) {
+                        index++;
+                        continue;
+                    }
+                    const nestedSelector = content.substring(nestedSelectorStart, braceIndex).trim();
+                    const closeBraceIndex = findClosingBrace(content, braceIndex);
+                    if (closeBraceIndex === -1) {
+                        index++;
+                        continue;
+                    }
+                    const nestedContent = content.substring(braceIndex + 1, closeBraceIndex);
+                    const fullSelector = nestedSelector.replace(/&/g, selector);
+                    processBlock(fullSelector, nestedContent, result);
+                    index = closeBraceIndex + 1;
+                } else {
+                    index++;
+                }
+            }
+            
+            return result;
+        }
+        function processScss(scss) {
+            const results = [];
+            let index = 0;
+            while (index < scss.length) {
+                const braceIndex = scss.indexOf('{', index);
+                if (braceIndex === -1) break;
+                const selector = scss.substring(index, braceIndex).trim();
+                if (!selector || selector.startsWith('@') || selector.startsWith('//')) {
+                    index = braceIndex + 1;
+                    continue;
+                }
+                const closeBraceIndex = findClosingBrace(scss, braceIndex);
+                if (closeBraceIndex === -1) break;
+                const blockContent = scss.substring(braceIndex + 1, closeBraceIndex);
+                const blockResults = processBlock(selector, blockContent);
+                results.push(...blockResults);
+                index = closeBraceIndex + 1;
+            }
+            return results;
+        }
+        function generateCss(results) {
+            return results.map(item => {
+                return `${item.selector} { ${item.rules}; }`;
+            }).join('\n');
+        }
+        const processed = processScss(scss);
+        return generateCss(processed);
     }
     
     // Bind data to UI elements
