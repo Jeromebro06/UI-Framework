@@ -35,7 +35,6 @@ class UI {
                     const subId = `${id}-${key}`;
                     const placeholder = `{{${key}}}`;
                     if (originalHtml.includes(placeholder)) {
-                        // Verschachteltes Element erstellen
                         this.CreateNestedElement({
                             id: subId,
                             parentId: id,
