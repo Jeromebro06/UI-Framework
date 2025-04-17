@@ -142,47 +142,28 @@ class UI {
             }
             return -1;
         }
-        
-        // Helper function to extract direct CSS rules from content
         function extractRules(content) {
-            // Create a copy of content to work with
             let cleanContent = content;
-            
-            // Remove all nested blocks (both with & and without)
             let index = 0;
             while (index < cleanContent.length) {
-                // Look for nested block opening brace
                 const openBrace = cleanContent.indexOf('{', index);
                 if (openBrace === -1) break;
-                
-                // Find matching closing brace
                 const closeBrace = findClosingBrace(cleanContent, openBrace);
                 if (closeBrace === -1) break;
-                
-                // Find the start of the selector for this block
                 let selectorStart = openBrace;
                 while (selectorStart > 0 && cleanContent[selectorStart - 1] !== '}' && cleanContent[selectorStart - 1] !== ';') {
                     selectorStart--;
                 }
-                
-                // Remove the nested block and its selector
                 cleanContent = cleanContent.substring(0, selectorStart) + cleanContent.substring(closeBrace + 1);
-                
-                // Reset index to beginning since we modified the string
                 index = 0;
             }
-            
-            // Extract and clean rules
             return cleanContent
                 .split(';')
                 .map(rule => rule.trim())
                 .filter(rule => rule.length > 0)
                 .join('; ');
         }
-        
-        // Process a selector block and all its nested content
         function processBlock(selector, content, result = []) {
-            // Extract direct rules for this selector
             const directRules = extractRules(content);
             if (directRules.length > 0) {
                 result.push({
@@ -190,19 +171,14 @@ class UI {
                     rules: directRules
                 });
             }
-            
-            // Find all nested blocks
             let index = 0;
             let inComment = false;
-            
             while (index < content.length) {
-                // Skip comments
                 if (content.substr(index, 2) === '/*') {
                     inComment = true;
                     index += 2;
                     continue;
                 }
-                
                 if (inComment) {
                     if (content.substr(index, 2) === '*/') {
                         inComment = false;
@@ -212,49 +188,30 @@ class UI {
                     }
                     continue;
                 }
-                
-                // Check for opening brace which indicates a nested block
                 if (content[index] === '{') {
-                    // Find the start of the selector
                     let selectorStart = index - 1;
                     while (selectorStart >= 0 && content[selectorStart] !== '}' && content[selectorStart] !== ';') {
                         selectorStart--;
                     }
                     selectorStart++;
-                    
-                    // Extract the selector
                     const nestedSelector = content.substring(selectorStart, index).trim();
-                    
-                    // Skip if this is an empty or invalid selector
                     if (!nestedSelector) {
                         index++;
                         continue;
                     }
-                    
-                    // Find the end of the block
                     const closeBraceIndex = findClosingBrace(content, index);
                     if (closeBraceIndex === -1) {
                         index++;
                         continue;
                     }
-                    
-                    // Extract the content of the nested block
                     const nestedContent = content.substring(index + 1, closeBraceIndex);
-                    
-                    // Handle different types of selectors
                     let fullSelector;
                     if (nestedSelector.includes('&')) {
-                        // Handle & selector (replace & with parent)
                         fullSelector = nestedSelector.replace(/&/g, selector);
                     } else {
-                        // Handle regular nested selector (add space between parent and child)
                         fullSelector = `${selector} ${nestedSelector}`;
                     }
-                    
-                    // Process this nested block recursively
                     processBlock(fullSelector, nestedContent, result);
-                    
-                    // Move past this block
                     index = closeBraceIndex + 1;
                 } else {
                     index++;
@@ -263,22 +220,14 @@ class UI {
             
             return result;
         }
-        
-        // Process the entire SCSS string
         function processScss(scss) {
             const results = [];
             let index = 0;
-            
             while (index < scss.length) {
-                // Skip whitespace
                 while (index < scss.length && /\s/.test(scss[index])) {
                     index++;
                 }
-                
-                // Check for end of string
                 if (index >= scss.length) break;
-                
-                // Skip comments
                 if (scss.substr(index, 2) === '/*') {
                     const endComment = scss.indexOf('*/', index + 2);
                     if (endComment !== -1) {
@@ -288,8 +237,6 @@ class UI {
                     }
                     continue;
                 }
-                
-                // Skip single-line comments
                 if (scss.substr(index, 2) === '//') {
                     const endLine = scss.indexOf('\n', index);
                     if (endLine !== -1) {
@@ -299,18 +246,10 @@ class UI {
                     }
                     continue;
                 }
-                
-                // Find opening brace of next selector block
                 const braceIndex = scss.indexOf('{', index);
                 if (braceIndex === -1) break;
-                
-                // Extract the selector
                 const selector = scss.substring(index, braceIndex).trim();
-                
-                // Skip special selectors and empty selectors
                 if (!selector || selector.startsWith('@') || selector.startsWith('//')) {
-                    // For @ rules, we need to find the matching closing brace
-                    // to properly skip the entire block
                     if (selector.startsWith('@')) {
                         const closeBraceIndex = findClosingBrace(scss, braceIndex);
                         if (closeBraceIndex !== -1) {
@@ -323,34 +262,21 @@ class UI {
                     }
                     continue;
                 }
-                
-                // Find the matching closing brace
                 const closeBraceIndex = findClosingBrace(scss, braceIndex);
                 if (closeBraceIndex === -1) break;
-                
-                // Extract the block content
                 const blockContent = scss.substring(braceIndex + 1, closeBraceIndex);
-                
-                // Process this block and all its nested content
                 const blockResults = processBlock(selector, blockContent);
                 results.push(...blockResults);
-                
-                // Move past this block
                 index = closeBraceIndex + 1;
             }
-            
             return results;
         }
-        
-        // Generate CSS from processed results
         function generateCss(results) {
             return results.map(item => {
                 if (!item.rules) return '';
                 return `${item.selector} { ${item.rules}; }`;
             }).filter(css => css.length > 0).join('\n');
         }
-        
-        // Process SCSS and generate CSS
         const processed = processScss(scss);
         return generateCss(processed);
     }
