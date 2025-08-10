@@ -1152,3 +1152,248 @@
  *     }
  * });
  */
+
+/**
+* UI.LoadScss(filePath, forceReload)
+* ------------------
+* Lädt eine SCSS-Datei und verarbeitet sie zu CSS.
+* Lädt eine SCSS-Datei von einem angegebenen Pfad, verarbeitet sie zu CSS und 
+* speichert das Ergebnis im Cache für bessere Performance.
+* 
+* @param {string} filePath - Der Pfad zur SCSS-Datei
+* @param {boolean} [forceReload=false] - Ob der Cache ignoriert und die Datei neu geladen werden soll
+* 
+* @returns {Promise<string|null>} - Das verarbeitete CSS oder null bei Fehlern
+* 
+* @example
+* // SCSS-Datei laden
+* const css = await UI.LoadScss('../styles/components.scss');
+* if (css) {
+*     console.log('SCSS erfolgreich geladen und verarbeitet');
+* }
+* 
+* // Mit Force-Reload (Cache umgehen)
+* const freshCss = await UI.LoadScss('../styles/components.scss', true);
+*/
+
+/**
+* UI.ApplyScssFile(filePath, forceReload)
+* ------------------
+* Lädt und wendet eine SCSS-Datei direkt an.
+* Lädt eine SCSS-Datei, verarbeitet sie zu CSS und wendet die Styles sofort auf die Seite an.
+* 
+* @param {string} filePath - Der Pfad zur SCSS-Datei
+* @param {boolean} [forceReload=false] - Ob der Cache ignoriert werden soll
+* 
+* @returns {Promise<boolean>} - true bei Erfolg, false bei Fehlern
+* 
+* @example
+* // SCSS-Datei laden und anwenden
+* const success = await UI.ApplyScssFile('../styles/main.scss');
+* if (success) {
+*     console.log('Styles erfolgreich angewendet');
+* }
+* 
+* // Mit Cache-Refresh
+* await UI.ApplyScssFile('../styles/theme.scss', true);
+* 
+* // Direktes Laden beim UI-Erstellen
+* UI.Create({
+*     id: 'myComponent',
+*     html: '<div class="component">Inhalt</div>',
+*     scssFile: '../styles/components/myComponent.scss' // Automatisches Laden
+* });
+*/
+
+/**
+* UI.LoadMultipleScss(filePaths, forceReload)
+* ------------------
+* Lädt mehrere SCSS-Dateien parallel.
+* Lädt mehrere SCSS-Dateien gleichzeitig und kombiniert sie zu einem CSS-String. 
+* Fehlgeschlagene Dateien werden übersprungen.
+* 
+* @param {Array<string>} filePaths - Array mit Pfaden zu den SCSS-Dateien
+* @param {boolean} [forceReload=false] - Ob der Cache für alle Dateien ignoriert werden soll
+* 
+* @returns {Promise<string>} - Das kombinierte CSS aller erfolgreich geladenen Dateien
+* 
+* @example
+* // Mehrere SCSS-Dateien laden
+* const combinedCss = await UI.LoadMultipleScss([
+*     '../styles/base.scss',
+*     '../styles/components.scss',
+*     '../styles/utilities.scss'
+* ]);
+* 
+* // Mit Force-Reload
+* const freshCombinedCss = await UI.LoadMultipleScss([
+*     '../styles/variables.scss',
+*     '../styles/mixins.scss'
+* ], true);
+*/
+
+/**
+* UI.ApplyMultipleScssFiles(filePaths, forceReload)
+* ------------------
+* Lädt und wendet mehrere SCSS-Dateien an.
+* Lädt mehrere SCSS-Dateien parallel, kombiniert sie und wendet die 
+* resultierenden Styles sofort auf die Seite an.
+* 
+* @param {Array<string>} filePaths - Array mit Pfaden zu den SCSS-Dateien
+* @param {boolean} [forceReload=false] - Ob der Cache ignoriert werden soll
+* 
+* @returns {Promise<boolean>} - true bei Erfolg, false wenn keine Dateien geladen werden konnten
+* 
+* @example
+* // Mehrere SCSS-Dateien laden und anwenden
+* const success = await UI.ApplyMultipleScssFiles([
+*     '../styles/reset.scss',
+*     '../styles/base.scss',
+*     '../styles/layout.scss',
+*     '../styles/components.scss'
+* ]);
+* 
+* if (success) {
+*     console.log('Alle Styles erfolgreich angewendet');
+* }
+*/
+
+/**
+* UI.ClearScssCache(filePath)
+* ------------------
+* Löscht den SCSS-Cache.
+* Entfernt Einträge aus dem SCSS-Cache, um das erneute Laden von Dateien zu erzwingen.
+* 
+* @param {string} [filePath] - Pfad der spezifischen Datei, die aus dem Cache entfernt werden soll. 
+*                              Ohne Angabe wird der gesamte Cache geleert
+* 
+* @example
+* // Spezifische Datei aus dem Cache entfernen
+* UI.ClearScssCache('../styles/components.scss');
+* 
+* // Gesamten Cache leeren
+* UI.ClearScssCache();
+* 
+* // Danach wird die Datei beim nächsten Laden neu geladen
+* await UI.ApplyScssFile('../styles/components.scss');
+*/
+
+/**
+* SCSS-Syntax-Unterstützung
+* ------------------
+* Das UI-Framework unterstützt erweiterte SCSS-ähnliche Syntax mit verschachtelten Selektoren.
+* 
+* @description
+* Unterstützte SCSS-Features:
+* - Verschachtelte Selektoren
+* - Parent-Selector (&) für Pseudo-Klassen und Modifier
+* - Automatische CSS-Generierung aus SCSS-Syntax
+* 
+* @example
+* // Verschachtelte SCSS-Syntax
+* const scss = `
+*     .container {
+*         background-color: #fff;
+*         padding: 20px;
+*         
+*         .header {
+*             font-size: 24px;
+*             font-weight: bold;
+*             
+*             &:hover {
+*                 color: #333;
+*             }
+*         }
+*         
+*         .content {
+*             margin-top: 15px;
+*             
+*             & p {
+*                 line-height: 1.6;
+*             }
+*         }
+*     }
+* `;
+* 
+* // SCSS direkt anwenden
+* UI.Css(scss);
+* 
+* // Oder aus Datei laden
+* await UI.ApplyScssFile('../styles/nested-example.scss');
+*/
+
+/**
+* Beispiel: Theme-System mit SCSS
+* ------------------
+* Implementierung eines Theme-Wechsel-Systems mit SCSS-Dateien.
+* 
+* @example
+* // Theme-Dateien definieren
+* const themes = {
+*     light: '../styles/themes/light.scss',
+*     dark: '../styles/themes/dark.scss',
+*     blue: '../styles/themes/blue.scss'
+* };
+* 
+* // Theme wechseln
+* async function switchTheme(themeName) {
+*     // Alten Theme-Cache leeren
+*     Object.values(themes).forEach(path => {
+*         UI.ClearScssCache(path);
+*     });
+*     
+*     // Neues Theme laden
+*     const success = await UI.ApplyScssFile(themes[themeName]);
+*     if (success) {
+*         console.log(`Theme "${themeName}" aktiviert`);
+*         localStorage.setItem('selectedTheme', themeName);
+*     }
+* }
+* 
+* // Theme beim App-Start laden
+* const savedTheme = localStorage.getItem('selectedTheme') || 'light';
+* await switchTheme(savedTheme);
+*/
+
+/**
+* Beispiel: Modulares CSS-Loading
+* ------------------
+* Dynamisches Laden von Komponenten-spezifischen Styles.
+* 
+* @example
+* // Base-Styles beim App-Start laden
+* await UI.ApplyMultipleScssFiles([
+*     '../styles/variables.scss',
+*     '../styles/base.scss',
+*     '../styles/layout.scss'
+* ]);
+* 
+* // Komponentenspezifische Styles bei Bedarf laden
+* async function loadComponentStyles(componentName) {
+*     const componentPath = `../styles/components/${componentName}.scss`;
+*     return await UI.ApplyScssFile(componentPath);
+* }
+* 
+* // Verwendung bei UI-Erstellung
+* async function createModal() {
+*     // Styles laden
+*     await loadComponentStyles('modal');
+*     
+*     // UI erstellen
+*     UI.Create({
+*         id: 'userModal',
+*         html: `
+*             <div class="modal-container">
+*                 <div class="modal-content">Modal Inhalt</div>
+*             </div>
+*         `
+*     });
+* }
+* 
+* // Oder direkt beim UI-Erstellen
+* UI.Create({
+*     id: 'datePicker',
+*     html: '<div class="datepicker">...</div>',
+*     scssFile: '../styles/components/datepicker.scss'
+* });
+*/
