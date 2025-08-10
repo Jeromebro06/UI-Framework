@@ -2,16 +2,82 @@ class UI {
     static Class = 'ui';
     static elements = {};
     static eventHandlers = {};
+    static scssCache = {};
 
     // Set the HTML Tag
     static Element(id) {
         this.Class = id;
     }
 
+    // load scss files
+    static async LoadScss(filePath, forceReload = false) {
+        if (this.scssCache[filePath] && !forceReload) {
+            return this.scssCache[filePath];
+        }
+        try {
+            const response = await fetch(filePath);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const scssContent = await response.text();
+            const processedCss = this.processSCSS(scssContent);
+            this.scssCache[filePath] = processedCss;
+            return processedCss;
+        } catch (error) {
+            console.error(`Fehler beim Laden der SCSS-Datei '${filePath}':`, error);
+            return null;
+        }
+    }
+
+    static async ApplyScssFile(filePath, forceReload = false) {
+        const css = await this.LoadScss(filePath, forceReload);
+        if (css) {
+            this.Css(css);
+            return true;
+        }
+        return false;
+    }
+
+    static async LoadMultipleScss(filePaths, forceReload = false) {
+        const promises = filePaths.map(filePath => this.LoadScss(filePath, forceReload));
+        const results = await Promise.allSettled(promises);
+        
+        let combinedCss = '';
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value) {
+                combinedCss += result.value + '\n';
+            } else {
+                console.warn(`Fehler beim Laden der Datei '${filePaths[index]}':`, result.reason);
+            }
+        });
+        
+        return combinedCss;
+    }
+
+    static async ApplyMultipleScssFiles(filePaths, forceReload = false) {
+        const combinedCss = await this.LoadMultipleScss(filePaths, forceReload);
+        if (combinedCss) {
+            this.Css(combinedCss);
+            return true;
+        }
+        return false;
+    }
+
+    static ClearScssCache(filePath = null) {
+        if (filePath) {
+            delete this.scssCache[filePath];
+        } else {
+            this.scssCache = {};
+        }
+    }
+
     // Create UI
-    static Create({ id, html, css, appendTo = null, animate = null, elements = null }) {
+    static Create({ id, html, css, appendTo = null, animate = null, elements = null, scssFile = null }) {
         if (this.elements[id]) {
             return console.warn(`UI mit ID '${id}' existiert bereits.`);
+        }
+        if (scssFile) {
+            this.ApplyScssFile(scssFile);
         }
         if (css) {
             this.Css(css);
